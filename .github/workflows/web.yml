@@ -1,0 +1,53 @@
+# Проверки участника 2: сайт (web/) и база (db/).
+# Без фильтра по путям: проверка должна быть зелёной в каждом PR, чтобы её можно было
+# сделать обязательной в защите ветки main.
+
+name: web
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test:
+    name: ruff и pytest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Установить зависимости по uv.lock
+        run: uv sync --project web --locked
+      - name: ruff check
+        run: uv run --project web ruff check --config web/pyproject.toml web tests/web
+      - name: ruff format
+        run: uv run --project web ruff format --check --config web/pyproject.toml web tests/web
+      - name: pytest
+        run: uv run --project web pytest tests/web
+
+  migrations:
+    name: миграции с нуля и сверка со схемой
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Собрать образ миграций и поднять базу
+        run: |
+          cp .env.example .env
+          docker compose --profile tools build migrate
+          docker compose up -d --wait db
+          docker compose run --rm migrate --version
+      - name: Применить миграции к пустой базе и сравнить с contracts/schema.sql
+        run: |
+          if ! ls db/migrations/*.sql >/dev/null 2>&1; then
+            echo "Миграций пока нет, проверка пропущена."
+            exit 0
+          fi
+          docker compose run --rm --user "$(id -u):$(id -g)" migrate
+          if [ -n "$(git status --porcelain contracts/schema.sql)" ]; then
+            echo "::error::contracts/schema.sql не совпадает с результатом миграций. Примените миграции локально и закоммитьте обновлённую схему."
+            git diff contracts/schema.sql
+            exit 1
+          fi
