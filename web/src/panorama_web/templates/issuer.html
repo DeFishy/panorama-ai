@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}{{ card.issuer.name }}: {{ card.period.label }} · Panorama AI{% endblock %}
+
+{% block content %}
+{% set n = source_numbers %}
+
+<header class="card-head">
+  <p class="card-head__crumbs"><a href="/">Эмитенты</a> / {{ card.issuer.ticker }}</p>
+  <h1>{{ card.issuer.name }} <span class="ticker">{{ card.issuer.ticker }}</span></h1>
+  <dl class="card-head__facts">
+    <div><dt>Отрасль</dt><dd>{{ card.issuer.sector }}</dd></div>
+    <div><dt>Период</dt><dd>{{ card.period.label }}, {{ STANDARDS[card.period.standard] }}</dd></div>
+    <div><dt>Отчётность опубликована</dt><dd>{{ card.period.report_published_at | date }}</dd></div>
+    <div><dt>Версия карточки</dt><dd>{{ card.card_version }} от {{ card.generated_at | datetime }}</dd></div>
+  </dl>
+  <p class="ai-mark">Подготовлено с помощью ИИ. Это аналитика, а не индивидуальная инвестиционная рекомендация.</p>
+  <nav class="toc" aria-label="Разделы карточки">
+    <a href="#dossier">Досье</a>
+    <a href="#changes">Что изменилось</a>
+    <a href="#reasons">Почему</a>
+    <a href="#risks">Риски</a>
+    <a href="#scenarios">Сценарии</a>
+    <a href="#watch">Что отслеживать</a>
+    <a href="#limitations">Ограничения</a>
+    <a href="#sources">Источники</a>
+  </nav>
+</header>
+
+<section id="dossier" class="section">
+  <h2>Досье</h2>
+  {% for key, title in DOSSIER_BLOCKS.items() if key in card.dossier %}
+  <div class="dossier-block">
+    <h3>{{ title }}</h3>
+    {{ m.block(card.dossier[key], n, targets) }}
+  </div>
+  {% else %}
+  <p class="no-data"><span class="no-data__title">Данных нет.</span> Досье для этой карточки ещё не собрано.</p>
+  {% endfor %}
+</section>
+
+<section id="changes" class="section">
+  <h2>Что изменилось</h2>
+  <p class="hint">Показатели посчитаны кодом по отчётности. Кв/кв: к прошлому кварталу, г/г: к тому же периоду прошлого года. <span class="badge-significant">Существенно</span> отмечены изменения выше порогов из словаря метрик.</p>
+  <div class="table-scroll">
+    <table class="metrics">
+      <thead>
+        <tr>
+          <th scope="col">Показатель</th>
+          <th scope="col" class="num">{{ card.period.label }}</th>
+          <th scope="col" class="num">Прошлый квартал</th>
+          <th scope="col" class="num">Год назад</th>
+          <th scope="col" class="num">Кв/кв</th>
+          <th scope="col" class="num">Г/г</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for metric in card.changes.metrics %}
+        <tr id="{{ metric.id }}"{% if metric.significant %} class="is-significant"{% endif %}>
+          <th scope="row">
+            {{ metric.name }}, <span class="unit">{{ metric.unit }}</span>
+            {% if metric.significant %}<span class="badge-significant">Существенно</span>{% endif %}
+            {% if metric.comparability_note %}<p class="metric-note">{{ metric.comparability_note }}</p>{% endif %}
+            {% if metric.no_data_reason %}<p class="metric-note">Данных нет: {{ metric.no_data_reason }}</p>{% endif %}
+            {{ m.refs(metric.source_refs, n) }}
+          </th>
+          <td class="num">{{ metric.value | number }}</td>
+          <td class="num">{{ metric.prev_quarter | number }}</td>
+          <td class="num">{{ metric.prev_year | number }}</td>
+          <td class="num">{{ metric.qoq_pct | pct }}</td>
+          <td class="num">{{ metric.yoy_pct | pct }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="reasons" class="section">
+  <h2>Почему</h2>
+  {% if card.changes.reasons %}
+  <ul class="statements">
+    {% for st in card.changes.reasons %}{{ m.statement(st, n, targets) }}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="no-data"><span class="no-data__title">Данных нет.</span> Причины изменений в источниках не названы.</p>
+  {% endif %}
+</section>
+
+<section id="risks" class="section">
+  <h2>Риски</h2>
+  {% for risk in card.risks %}
+  <div class="risk">
+    <h3>{{ RISK_CATEGORIES[risk.category] }}</h3>
+    <ul class="statements">
+      {% for st in risk.statements %}{{ m.statement(st, n, targets) }}{% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <p class="no-data"><span class="no-data__title">Данных нет.</span> Существенных рисков в источниках не выделено.</p>
+  {% endfor %}
+</section>
+
+<section id="scenarios" class="section">
+  <h2>Три сценария</h2>
+  <p class="hint">Сценарии описывают условия и признаки, а не обещают результат. Вероятности не указываем: данных для их обоснования нет.</p>
+  <div class="scenarios">
+    {% for key, title in SCENARIOS.items() %}
+    {% set sc = card.scenarios[key] %}
+    <article class="scenario scenario--{{ key }}">
+      <p class="scenario__kind">{{ title }}</p>
+      <h3>{{ sc.title }}</h3>
+      <p class="scenario__horizon">Горизонт: {{ sc.horizon }}</p>
+      <ul class="conditions">
+        {% for cond in sc.conditions %}
+        <li id="{{ cond.id }}">
+          {# if: ключевое слово Jinja, поэтому через квадратные скобки. #}
+          <p><strong>Если</strong> {{ cond["if"] }}, <strong>то</strong> {{ cond["then"] }}.</p>
+          {{ m.based_on(cond.based_on, targets) }}
+        </li>
+        {% endfor %}
+      </ul>
+      <h4>Признаки</h4>
+      <ul>{% for item in sc.signals %}<li>{{ item }}</li>{% endfor %}</ul>
+      <h4>Что сломает тезис</h4>
+      <ul>{% for item in sc.thesis_breakers %}<li>{{ item }}</li>{% endfor %}</ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="watch" class="section">
+  <h2>Что отслеживать</h2>
+  {% if card.watch %}
+  <ul class="watch">
+    {% for item in card.watch %}
+    <li class="watch__item">
+      <p class="watch__when">{% if item.date %}{{ item.date | date }}{% else %}{{ item.date_note }}{% endif %}</p>
+      <p><span class="watch__type">{{ EVENT_TYPES[item.event_type] }}.</span> {{ item.description }}</p>
+      {{ m.refs(item.source_refs, n) }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="no-data"><span class="no-data__title">Данных нет.</span> Ближайшие события в источниках не объявлены.</p>
+  {% endif %}
+</section>
+
+<section id="limitations" class="section">
+  <h2>Ограничения</h2>
+  <p>{{ card.limitations.disclaimer }}</p>
+  <p>Подготовлено с помощью ИИ.</p>
+  <h3>Какие данные использованы</h3>
+  <ul>{% for item in card.limitations.data_used %}<li>{{ item }}</li>{% endfor %}</ul>
+</section>
+
+<section id="sources" class="section">
+  <h2>Источники</h2>
+  <ol class="sources">
+    {% for source in card.sources %}
+    <li id="source-{{ source.source_id }}">
+      <a href="{{ source.url }}" rel="noopener noreferrer nofollow">{{ source.title }}</a>
+      <p class="sources__meta">
+        {{ source.publisher }} · {{ SOURCE_LEVELS[source.level] }} · опубликован {{ source.published_at | date }}{% if source.doc_version %} · версия {{ source.doc_version }}{% endif %} · получен {{ source.retrieved_at | datetime }}
+      </p>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

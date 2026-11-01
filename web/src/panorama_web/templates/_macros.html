@@ -1,0 +1,42 @@
+{# Сноски на источники: номер из списка внизу страницы, место в документе и цитата. #}
+{% macro refs(items, source_numbers) %}
+<ul class="refs">
+  {% for ref in items %}
+  <li class="refs__item">
+    <a class="refs__num" href="#source-{{ ref.source_id }}">[{{ source_numbers[ref.source_id] }}]</a>
+    {{ ref.locator | locator }}
+    {% if ref.quote %}<q class="refs__quote">{{ ref.quote }}</q>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{# Одно утверждение с меткой «факт», «интерпретация» или «сценарий» (инвариант 4). #}
+{% macro statement(st, source_numbers, targets) %}
+<li class="statement statement--{{ st.kind }}" id="{{ st.id }}">
+  <p class="statement__text">
+    <span class="label label--{{ st.kind }}">{{ KIND_LABELS[st.kind] }}{% if st.attribution %} · {{ ATTRIBUTION_LABELS[st.attribution] }}{% endif %}</span>
+    {{ st.text }}
+  </p>
+  {% if st.source_refs %}{{ refs(st.source_refs, source_numbers) }}{% endif %}
+  {% if st.based_on %}{{ based_on(st.based_on, targets) }}{% endif %}
+</li>
+{% endmacro %}
+
+{# На какие утверждения и показатели карточки опирается вывод. #}
+{% macro based_on(ids, targets) %}
+<p class="based-on">Опирается на:
+  {% for target in ids %}<a href="#{{ target }}">{{ targets.get(target, target) }}</a>{% if not loop.last %}; {% endif %}{% endfor %}
+</p>
+{% endmacro %}
+
+{# Блок из утверждений или явное «данных нет» с причиной. #}
+{% macro block(content, source_numbers, targets) %}
+{% if content.no_data %}
+<p class="no-data"><span class="no-data__title">Данных нет.</span> {{ content.reason }}</p>
+{% else %}
+<ul class="statements">
+  {% for st in content.statements %}{{ statement(st, source_numbers, targets) }}{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
