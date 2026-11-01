@@ -1,0 +1,258 @@
+{
+  "schema_version": "0.1",
+  "card_id": "prmr-2026q3",
+  "card_version": 1,
+  "generated_at": "2026-10-31T12:00:00+03:00",
+  "issuer": {
+    "issuer_id": "prmr",
+    "name": "ПАО Пример (вымышленная компания)",
+    "ticker": "PRMR",
+    "sector": "Пример отрасли"
+  },
+  "period": {
+    "type": "quarter",
+    "end_date": "2026-09-30",
+    "standard": "IFRS",
+    "label": "3 кв. 2026",
+    "report_published_at": "2026-10-28"
+  },
+  "sources": [
+    {
+      "source_id": "s1",
+      "title": "Промежуточная сокращённая консолидированная отчётность МСФО за 9 месяцев 2026 года",
+      "publisher": "ПАО Пример",
+      "level": 1,
+      "url": "https://example.com/prmr/ifrs-9m-2026.pdf",
+      "published_at": "2026-10-28",
+      "retrieved_at": "2026-10-28T18:30:00+03:00",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000001"
+    },
+    {
+      "source_id": "s2",
+      "title": "Пресс-релиз о результатах за 3 квартал 2026 года",
+      "publisher": "ПАО Пример",
+      "level": 2,
+      "url": "https://example.com/prmr/press-2026q3",
+      "published_at": "2026-10-28",
+      "retrieved_at": "2026-10-28T18:31:00+03:00",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000002"
+    }
+  ],
+  "dossier": {
+    "passport": {
+      "statements": [
+        {
+          "id": "d-passport-1",
+          "kind": "fact",
+          "text": "Компания производит условную продукцию; 70% выручки приходится на внутренний рынок.",
+          "source_refs": [
+            {
+              "source_id": "s1",
+              "locator": { "page": 12, "section": "Примечание 5. Сегменты" },
+              "quote": "70% выручки получено от покупателей в Российской Федерации"
+            }
+          ]
+        }
+      ]
+    },
+    "debt_liquidity": {
+      "statements": [
+        {
+          "id": "d-debt-1",
+          "kind": "fact",
+          "text": "Около 40% долга погашается в течение 12 месяцев.",
+          "source_refs": [
+            {
+              "source_id": "s1",
+              "locator": { "page": 24, "table": "Таблица 14. Сроки погашения займов" }
+            }
+          ]
+        }
+      ]
+    },
+    "unknowns": {
+      "no_data": true,
+      "reason": "Компания не раскрывает структуру долга по валютам в промежуточной отчётности."
+    }
+  },
+  "changes": {
+    "metrics": [
+      {
+        "id": "m-revenue",
+        "metric_id": "revenue",
+        "name": "Выручка",
+        "unit": "млн руб.",
+        "value": 12000,
+        "prev_quarter": 11000,
+        "prev_year": 10000,
+        "qoq_pct": 9.09,
+        "yoy_pct": 20.0,
+        "significant": true,
+        "source_refs": [
+          {
+            "source_id": "s1",
+            "locator": { "page": 3, "table": "Консолидированный отчёт о прибыли или убытке" }
+          }
+        ]
+      },
+      {
+        "id": "m-net-debt-ebitda",
+        "metric_id": "net_debt_to_ebitda",
+        "name": "Чистый долг / EBITDA",
+        "unit": "x",
+        "value": 2.1,
+        "prev_quarter": 1.8,
+        "prev_year": 1.5,
+        "qoq_pct": 16.67,
+        "yoy_pct": 40.0,
+        "significant": true,
+        "comparability_note": "EBITDA за последние 12 месяцев; расчёт по словарю метрик.",
+        "source_refs": [
+          {
+            "source_id": "s1",
+            "locator": { "page": 24, "table": "Таблица 14. Сроки погашения займов" }
+          },
+          {
+            "source_id": "s1",
+            "locator": { "page": 3, "table": "Консолидированный отчёт о прибыли или убытке" }
+          }
+        ]
+      },
+      {
+        "id": "m-dividends",
+        "metric_id": "dividends_per_share",
+        "name": "Дивиденд на акцию",
+        "unit": "руб.",
+        "value": null,
+        "prev_quarter": null,
+        "prev_year": null,
+        "qoq_pct": null,
+        "yoy_pct": null,
+        "significant": false,
+        "no_data_reason": "Промежуточные дивиденды за период не объявлялись.",
+        "source_refs": [
+          {
+            "source_id": "s1",
+            "locator": { "section": "Примечание 18. Капитал" }
+          }
+        ]
+      }
+    ],
+    "reasons": [
+      {
+        "id": "r-1",
+        "kind": "fact",
+        "text": "Выручка выросла на 20% год к году; компания связывает рост с запуском новой линии.",
+        "attribution": "company",
+        "source_refs": [
+          {
+            "source_id": "s2",
+            "locator": { "section": "Основные события квартала" },
+            "quote": "рост выручки обеспечен запуском новой производственной линии"
+          }
+        ]
+      },
+      {
+        "id": "r-2",
+        "kind": "interpretation",
+        "text": "Долговая нагрузка растёт быстрее выручки: новая линия финансировалась займами.",
+        "source_refs": [
+          {
+            "source_id": "s1",
+            "locator": { "page": 24, "table": "Таблица 14. Сроки погашения займов" }
+          }
+        ]
+      }
+    ]
+  },
+  "risks": [
+    {
+      "category": "debt",
+      "statements": [
+        {
+          "id": "risk-debt-1",
+          "kind": "interpretation",
+          "text": "Значительная часть долга погашается в ближайший год, поэтому компании понадобится рефинансирование при высоких ставках.",
+          "source_refs": [
+            {
+              "source_id": "s1",
+              "locator": { "page": 24, "table": "Таблица 14. Сроки погашения займов" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scenarios": {
+    "base": {
+      "title": "Новая линия выходит на плановую загрузку",
+      "horizon": "до отчётности за 2026 год",
+      "conditions": [
+        {
+          "id": "sc-base-1",
+          "if": "загрузка новой линии сохраняется на уровне 3 квартала",
+          "then": "рост выручки год к году остаётся двузначным",
+          "based_on": ["r-1", "m-revenue"]
+        }
+      ],
+      "signals": ["выручка за 4 квартал не ниже, чем за 3 квартал"],
+      "thesis_breakers": ["компания сообщает об остановке или переносе запуска линии"]
+    },
+    "negative": {
+      "title": "Рефинансирование дорожает",
+      "horizon": "ближайшие 12 месяцев",
+      "conditions": [
+        {
+          "id": "sc-neg-1",
+          "if": "компания рефинансирует краткосрочный долг по более высоким ставкам",
+          "then": "процентные расходы растут, а чистый долг / EBITDA остаётся выше 2x",
+          "based_on": ["risk-debt-1", "m-net-debt-ebitda"]
+        }
+      ],
+      "signals": ["рост процентных расходов в отчётности за 4 квартал"],
+      "thesis_breakers": ["долг погашен из операционного денежного потока без новых займов"]
+    },
+    "positive": {
+      "title": "Рост выручки опережает рост долга",
+      "horizon": "до отчётности за 2026 год",
+      "conditions": [
+        {
+          "id": "sc-pos-1",
+          "if": "выручка продолжает расти, а новые займы не привлекаются",
+          "then": "чистый долг / EBITDA снижается к уровню прошлого года",
+          "based_on": ["r-2", "m-net-debt-ebitda"]
+        }
+      ],
+      "signals": ["снижение чистого долга в отчётности за 4 квартал"],
+      "thesis_breakers": ["компания объявляет новую крупную инвестиционную программу на заёмные средства"]
+    }
+  },
+  "watch": [
+    {
+      "event_type": "reporting",
+      "date_note": "ожидается в марте 2027",
+      "description": "Годовая отчётность МСФО за 2026 год.",
+      "source_refs": [
+        {
+          "source_id": "s2",
+          "locator": { "section": "Календарь инвестора" }
+        }
+      ]
+    }
+  ],
+  "limitations": {
+    "disclaimer": "Это аналитический материал, а не индивидуальная инвестиционная рекомендация. Решение всегда за вами.",
+    "data_used": [
+      "Отчётность МСФО за 9 месяцев 2026 года",
+      "Пресс-релиз компании о результатах за 3 квартал 2026 года"
+    ],
+    "ai_generated": true
+  },
+  "generation": {
+    "pipeline_version": "0.0.0-fixture",
+    "model": "fixture/none",
+    "prompt_version": "fixture",
+    "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "tokens": { "input": 0, "output": 0 }
+  }
+}

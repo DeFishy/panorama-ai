@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://panorama-ai.local/contracts/card.schema.json",
+  "title": "Карточка эмитента",
+  "description": "Контракт между конвейером участника 1 (собирает карточку) и сайтом участника 2 (показывает). ЧЕРНОВИК 0.1: меняется только по согласию обоих участников. Статус карточки (draft, review, published, superseded, rejected) хранится в БД, а не здесь.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "card_id",
+    "card_version",
+    "generated_at",
+    "issuer",
+    "period",
+    "sources",
+    "dossier",
+    "changes",
+    "risks",
+    "scenarios",
+    "watch",
+    "limitations",
+    "generation"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Версия этого контракта, которой соответствует карточка.",
+      "const": "0.1"
+    },
+    "card_id": {
+      "description": "Постоянный идентификатор карточки: эмитент и период. Не меняется между версиями.",
+      "$ref": "#/$defs/id"
+    },
+    "card_version": {
+      "description": "Номер версии карточки, растёт при каждой пересборке.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "description": "Когда собрана эта версия (ISO 8601 с часовым поясом).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "issuer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer_id", "name", "ticker", "sector"],
+      "properties": {
+        "issuer_id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "ticker": { "type": "string", "pattern": "^[A-Z0-9]{1,12}$" },
+        "sector": { "type": "string", "minLength": 1 }
+      }
+    },
+    "period": {
+      "description": "Отчётный период, по которому построено «что изменилось».",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "end_date", "standard", "label", "report_published_at"],
+      "properties": {
+        "type": { "enum": ["quarter", "half_year", "year"] },
+        "end_date": { "type": "string", "format": "date" },
+        "standard": { "description": "Стандарт отчётности.", "enum": ["IFRS", "RAS"] },
+        "label": {
+          "description": "Подпись для сайта, например «3 кв. 2026».",
+          "type": "string",
+          "minLength": 1
+        },
+        "report_published_at": {
+          "description": "Дата публикации отчётности, на которой построена карточка.",
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "sources": {
+      "description": "Все документы, на которые ссылается карточка. Любая ссылка source_refs должна вести сюда.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "dossier": {
+      "description": "Досье: восемь блоков шаблона (D-18). В MVP любой блок можно опустить или заполнить «данных нет».",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passport": { "$ref": "#/$defs/block" },
+        "financials": { "$ref": "#/$defs/block" },
+        "debt_liquidity": { "$ref": "#/$defs/block" },
+        "strategy": { "$ref": "#/$defs/block" },
+        "sensitivity": { "$ref": "#/$defs/block" },
+        "context": { "$ref": "#/$defs/block" },
+        "unknowns": { "$ref": "#/$defs/block" },
+        "event_log": { "$ref": "#/$defs/block" }
+      }
+    },
+    "changes": {
+      "description": "Что изменилось: показатели, посчитанные кодом, и причины изменений со ссылками.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metrics", "reasons"],
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/metric" }
+        },
+        "reasons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/statement" }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "statements"],
+        "properties": {
+          "category": {
+            "description": "debt: долговая нагрузка; prices_rates: цены и ставки; post_period: события после отчётной даты; auditor: замечания аудитора.",
+            "enum": ["debt", "prices_rates", "post_period", "auditor", "other"]
+          },
+          "statements": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/statement" }
+          }
+        }
+      }
+    },
+    "scenarios": {
+      "description": "Ровно три сценария. Вероятностей нет: поле для них не предусмотрено.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "negative", "positive"],
+      "properties": {
+        "base": { "$ref": "#/$defs/scenario" },
+        "negative": { "$ref": "#/$defs/scenario" },
+        "positive": { "$ref": "#/$defs/scenario" }
+      }
+    },
+    "watch": {
+      "description": "Что отслеживать: ближайшие события.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/watch_item" }
+    },
+    "limitations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disclaimer", "data_used", "ai_generated"],
+      "properties": {
+        "disclaimer": {
+          "description": "Текст о том, что это аналитика, а не индивидуальная инвестиционная рекомендация.",
+          "type": "string",
+          "minLength": 1
+        },
+        "data_used": {
+          "description": "Перечень использованных данных простым языком.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "ai_generated": {
+          "description": "Пометка «подготовлено с помощью ИИ» (D-19).",
+          "const": true
+        }
+      }
+    },
+    "generation": {
+      "description": "Воспроизводимость (D-17, инвариант 6). Сайт этот блок не показывает.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pipeline_version", "model", "prompt_version", "prompt_sha256", "tokens"],
+      "properties": {
+        "pipeline_version": { "type": "string", "minLength": 1 },
+        "model": {
+          "description": "Провайдер и точная версия модели.",
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt_version": { "type": "string", "minLength": 1 },
+        "prompt_sha256": { "$ref": "#/$defs/sha256" },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input", "output"],
+          "properties": {
+            "input": { "type": "integer", "minimum": 0 },
+            "output": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "Идентификатор латиницей: строчные буквы, цифры, «_», «-», «.».",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "source": {
+      "description": "Документ-источник «на момент публикации» (инвариант 3).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "title",
+        "publisher",
+        "level",
+        "url",
+        "published_at",
+        "retrieved_at",
+        "sha256"
+      ],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "publisher": { "type": "string", "minLength": 1 },
+        "level": {
+          "description": "Уровень источника по D-14: 1 первичный, 2 позиция компании, 3 СМИ, 4 прочее.",
+          "enum": [1, 2, 3, 4]
+        },
+        "url": { "type": "string", "format": "uri" },
+        "published_at": { "type": "string", "format": "date" },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "doc_version": {
+          "description": "Версия документа, если эмитент её указывает (например, исправленная отчётность).",
+          "type": "string"
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "source_ref": {
+      "description": "Ссылка на конкретное место документа (инвариант 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "locator"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/id" },
+        "locator": {
+          "description": "Где в документе: хотя бы одно из полей.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "page": { "type": "integer", "minimum": 1 },
+            "table": { "type": "string", "minLength": 1 },
+            "section": { "type": "string", "minLength": 1 }
+          }
+        },
+        "quote": {
+          "description": "Короткая дословная цитата из источника; код проверяет, что она там есть.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      }
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source_ref" }
+    },
+    "based_on": {
+      "description": "Идентификаторы утверждений или показателей этой карточки, на которые опирается вывод.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "statement": {
+      "description": "Одно утверждение с пометкой (инвариант 4). Факт и интерпретация обязаны ссылаться на источник; сценарное утверждение опирается на факты карточки (based_on).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["fact", "interpretation", "scenario"] },
+        "text": { "type": "string", "minLength": 1 },
+        "attribution": {
+          "description": "company: «по заявлению компании» (уровень 2); media: «по сообщению» (уровень 3).",
+          "enum": ["company", "media"]
+        },
+        "source_refs": { "$ref": "#/$defs/source_refs" },
+        "based_on": { "$ref": "#/$defs/based_on" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["fact", "interpretation"] } } },
+          "then": { "required": ["source_refs"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "scenario" } } },
+          "then": { "required": ["based_on"] }
+        }
+      ]
+    },
+    "no_data": {
+      "description": "Явное «данных нет» вместо оценки (раздел 8 брифа).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["no_data", "reason"],
+      "properties": {
+        "no_data": { "const": true },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "block": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["statements"],
+          "properties": {
+            "statements": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/statement" }
+            }
+          }
+        },
+        { "$ref": "#/$defs/no_data" }
+      ]
+    },
+    "nullable_number": { "type": ["number", "null"] },
+    "metric": {
+      "description": "Показатель, посчитанный кодом (инвариант 1). null: значения нет, тогда обязательна причина no_data_reason.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "metric_id",
+        "name",
+        "unit",
+        "value",
+        "prev_quarter",
+        "prev_year",
+        "qoq_pct",
+        "yoy_pct",
+        "significant",
+        "source_refs"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "metric_id": {
+          "description": "Ключ из словаря метрик docs/metrics.md (ведёт участник 1).",
+          "$ref": "#/$defs/id"
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "unit": {
+          "description": "Единица, например «млн руб.», «%», «x».",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": { "$ref": "#/$defs/nullable_number" },
+        "prev_quarter": { "$ref": "#/$defs/nullable_number" },
+        "prev_year": { "$ref": "#/$defs/nullable_number" },
+        "qoq_pct": { "$ref": "#/$defs/nullable_number" },
+        "yoy_pct": { "$ref": "#/$defs/nullable_number" },
+        "significant": {
+          "description": "Флаг существенного изменения по порогам словаря метрик.",
+          "type": "boolean"
+        },
+        "comparability_note": {
+          "description": "Пометка о сопоставимости периодов (смена стандарта, сделки и т. п.).",
+          "type": "string"
+        },
+        "no_data_reason": { "type": "string", "minLength": 1 },
+        "source_refs": { "$ref": "#/$defs/source_refs" }
+      },
+      "if": { "properties": { "value": { "type": "null" } } },
+      "then": { "required": ["no_data_reason"] }
+    },
+    "scenario": {
+      "description": "Сценарий описывает условия и признаки («если X, то Y»), без обещаний результата.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "horizon", "conditions", "signals", "thesis_breakers"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "horizon": {
+          "description": "Горизонт сценария, например «до отчётности за 2026 год».",
+          "type": "string",
+          "minLength": 1
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "if", "then", "based_on"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "if": { "type": "string", "minLength": 1 },
+              "then": { "type": "string", "minLength": 1 },
+              "based_on": { "$ref": "#/$defs/based_on" }
+            }
+          }
+        },
+        "signals": {
+          "description": "Признаки, по которым видно, что сценарий реализуется.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "thesis_breakers": {
+          "description": "Что должно произойти, чтобы тезис сломался.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "watch_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_type", "description", "source_refs"],
+      "anyOf": [{ "required": ["date"] }, { "required": ["date_note"] }],
+      "properties": {
+        "event_type": { "enum": ["reporting", "dividends", "meeting", "offer", "other"] },
+        "date": { "type": "string", "format": "date" },
+        "date_note": {
+          "description": "Если точной даты нет: например, «ожидается в марте 2027».",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "source_refs": { "$ref": "#/$defs/source_refs" }
+      }
+    }
+  }
+}

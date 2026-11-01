@@ -5,6 +5,7 @@ description = "Сайт и API карточек Panorama AI"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
+    "jsonschema>=4.23",
     "uvicorn[standard]>=0.32",
 ]
 
