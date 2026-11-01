@@ -72,7 +72,17 @@
 
 ## Команды
 
-(Заполнить после создания проекта: установка окружения, запуск тестов, миграции, запуск сайта.)
+Сайт и база (участник 2). Нужны uv и Docker; команды запускаются из корня репозитория.
+
+- Установить зависимости сайта: `uv sync --project web`
+- Тесты сайта: `uv run --project web pytest tests/web`
+- Линтер и форматирование: `uv run --project web ruff check --config web/pyproject.toml web tests/web` и `uv run --project web ruff format --config web/pyproject.toml web tests/web`
+- Запустить сайт локально: `uv run --project web uvicorn panorama_web.app:app --reload`
+- База: скопировать `.env.example` в `.env`, затем `docker compose up -d db`
+- Миграции (обновляют `contracts/schema.sql`, его нужно закоммитить): `docker compose run --rm migrate`
+- Новая миграция: `docker compose run --rm migrate new <имя>`
+
+Python-часть участника 1: (заполнит участник 1).
 
 ## Контекст
 

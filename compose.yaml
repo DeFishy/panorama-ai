@@ -1,0 +1,42 @@
+# Локальная разработка: PostgreSQL и миграции.
+# Перед первым запуском: скопировать .env.example в .env и задать пароль.
+#   docker compose up -d db          # поднять базу
+#   docker compose run --rm migrate  # применить миграции и обновить contracts/schema.sql
+
+name: panorama
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?задайте POSTGRES_USER в .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
+      POSTGRES_DB: ${POSTGRES_DB:?задайте POSTGRES_DB в .env}
+    ports:
+      # Только на локальный интерфейс: базу не видно из сети.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build: ./db
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /repo/db/migrations
+      DBMATE_SCHEMA_FILE: /repo/contracts/schema.sql
+    volumes:
+      - ./db/migrations:/repo/db/migrations
+      - ./contracts:/repo/contracts
+    # Служебный сервис: запускается только через `docker compose run`.
+    profiles: ["tools"]
+
+volumes:
+  pgdata:
