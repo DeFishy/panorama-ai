@@ -2,54 +2,23 @@
 
 import copy
 import json
-from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
-ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = json.loads((ROOT / "contracts" / "card.schema.json").read_text(encoding="utf-8"))
+from panorama_web.cards import (
+    ROOT,
+    SCHEMA_PATH,
+    card_errors,
+    format_errors,
+    reference_errors,
+    schema_errors,
+)
+
+SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 EXAMPLE = json.loads(
     (ROOT / "tests" / "fixtures" / "cards" / "example.json").read_text(encoding="utf-8")
 )
-VALIDATOR = Draft202012Validator(SCHEMA, format_checker=Draft202012Validator.FORMAT_CHECKER)
-
-
-def walk(node: object) -> Iterator[dict]:
-    """Все словари карточки, на любой глубине."""
-    if isinstance(node, dict):
-        yield node
-        for value in node.values():
-            yield from walk(value)
-    elif isinstance(node, list):
-        for value in node:
-            yield from walk(value)
-
-
-def reference_errors(card: dict) -> list[str]:
-    """Ссылки, которые JSON Schema проверить не может: source_id и based_on внутри карточки."""
-    errors = []
-    source_ids = {source["source_id"] for source in card["sources"]}
-    sections = (card["dossier"], card["changes"], card["risks"], card["scenarios"], card["watch"])
-    nodes = [node for section in sections for node in walk(section)]
-
-    ids = [node["id"] for node in nodes if "id" in node]
-    duplicates = sorted({item for item in ids if ids.count(item) > 1})
-    errors += [f"повторяется id {item}" for item in duplicates]
-
-    for node in nodes:
-        for ref in node.get("source_refs", []):
-            if ref["source_id"] not in source_ids:
-                errors.append(f"{node.get('id')}: нет источника {ref['source_id']}")
-        for target in node.get("based_on", []):
-            if target not in ids:
-                errors.append(f"{node.get('id')}: based_on ведёт на несуществующий {target}")
-    return errors
-
-
-def schema_errors(card: dict) -> list[str]:
-    return [error.message for error in VALIDATOR.iter_errors(card)]
 
 
 def test_schema_itself_is_valid():
@@ -59,6 +28,7 @@ def test_schema_itself_is_valid():
 def test_example_card_is_valid():
     assert schema_errors(EXAMPLE) == []
     assert reference_errors(EXAMPLE) == []
+    assert format_errors(EXAMPLE) == []
 
 
 def drop_fact_source_refs(card):
@@ -155,3 +125,40 @@ def test_duplicate_ids_are_caught():
     card["changes"]["reasons"][1]["id"] = "r-1"
 
     assert "повторяется id r-1" in reference_errors(card)
+
+
+@pytest.mark.parametrize("url", ["javascript:alert(1)", "ftp://example.com/a.pdf", "example.com"])
+def test_source_url_must_be_http(url):
+    # jsonschema без пакета rfc3987 формат uri не проверяет, поэтому проверка своя.
+    card = copy.deepcopy(EXAMPLE)
+    card["sources"][0]["url"] = url
+
+    assert format_errors(card) == ["s1: ссылка не http(s)"]
+
+
+@pytest.mark.parametrize(
+    ("value", "error"),
+    [
+        ("вчера", "generated_at: не дата и время ISO 8601"),
+        ("2026-10-31T12:00:00", "generated_at: нет часового пояса"),
+    ],
+)
+def test_generated_at_must_be_datetime_with_timezone(value, error):
+    card = copy.deepcopy(EXAMPLE)
+    card["generated_at"] = value
+
+    assert format_errors(card) == [error]
+
+
+def test_card_errors_stops_after_schema_errors():
+    card = copy.deepcopy(EXAMPLE)
+    del card["sources"]
+
+    errors = card_errors(card)
+
+    assert errors != []
+    assert all("нет источника" not in error for error in errors)
+
+
+def test_card_errors_rejects_non_object():
+    assert card_errors([]) == ["карточка не объект JSON"]

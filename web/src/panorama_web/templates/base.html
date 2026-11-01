@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Panorama AI{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="site-header__logo" href="/">Panorama AI</a>
+      <nav class="site-header__nav" aria-label="Разделы сайта">
+        <a href="/">Эмитенты</a>
+        <a href="/methodology">Методология</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Аналитические материалы, а не индивидуальная инвестиционная рекомендация. Решение всегда за вами.</p>
+      <p>Материалы подготовлены с помощью ИИ. <a href="/methodology">Как мы работаем</a></p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Эмитенты · Panorama AI{% endblock %}
+
+{% block content %}
+<h1>Эмитенты</h1>
+<p class="lead">Досье компании и разбор того, что изменилось в последней отчётности: причины со ссылками на первоисточники, риски, три сценария и что отслеживать.</p>
+
+{% if cards %}
+<ul class="issuer-list">
+  {% for card in cards %}
+  <li class="issuer-list__item">
+    <a class="issuer-list__link" href="/issuers/{{ card.issuer.issuer_id }}">
+      <span class="issuer-list__name">{{ card.issuer.name }}</span>
+      <span class="ticker">{{ card.issuer.ticker }}</span>
+    </a>
+    <p class="issuer-list__meta">
+      {{ card.issuer.sector }} · {{ card.period.label }}, {{ STANDARDS[card.period.standard] }} · отчётность опубликована {{ card.period.report_published_at | date }}
+    </p>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Карточек пока нет.</p>
+{% endif %}
+{% endblock %}
